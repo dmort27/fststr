@@ -1,6 +1,4 @@
  #!/usr/bin/env python3
-
-import re
 from collections import defaultdict
 
 import pywrapfst as fst
@@ -9,12 +7,18 @@ import pywrapfst as fst
 class IllegalSymbol(Exception):
     pass
 
+
+class FstError(Exception):
+    pass
+
+
 def symbols_table_from_alphabet(alphabet):
     st = fst.SymbolTable()
-    st.add_symbol('<eps>', 0)
+    st.add_symbol('<epsilon>', 0)
     for i, symb in enumerate(alphabet):
         st.add_symbol(symb, i+1)
     return st
+
 
 def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
     """Produce a linear automata.
@@ -37,6 +41,7 @@ def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
 
     return compiler.compile()
 
+
 def apply_fst_to_list(elements, automata_op, is_project=True, **kwargs):
     """Compose a linear automata generated from `elements` with `automata_op`.
 
@@ -55,71 +60,64 @@ def apply_fst_to_list(elements, automata_op, is_project=True, **kwargs):
         out.project(project_output=True)
     return out
 
-def chain_fst_to_dag(automaton):
-    """Converts an acyclic FST to a DAG represented as a dict
 
-    Args:
-        automaton (Fst): an acyclic FST
-    Returns:
-        dict: a dictionary-representation of the same network
-    """
-    dag = defaultdict(list)
-    for transition in automaton.__str__().decode('utf-8').split('\n'):
-        try:
-            source, target, _, upper = transition.split('\t')
-            dag[source].append((target, upper))
-        except:
-            continue
-    return dag
-
-def all_strings_from_dag(dag):
-    """Extracts all strings corresponding to paths in a DAG
-
-    Args:
-        dag (dict): a dictionary; values are (state, label) pairs
-    Returns:
-        list: strings corresponding to each path through the input DAG
-    """
-    def dfs(data, path, paths=[]):
+def all_strings_from_chain(chain, table):
+    def dfs(graph, path, paths=[]):
         target, label = path[-1]
-        if target in data:
-            for (new_target, new_label) in data[target]:
+        if graph.num_arcs(target):
+            for arc in graph.arcs(target):
+                new_target = arc.nextstate
+                new_label = arc.olabel
                 new_path = path + [(new_target, new_label)]
-                paths = dfs(data, new_path, paths)
+                paths = dfs(graph, new_path, paths)
         else:
             paths += [path]
         return paths
-    paths = dfs(dag, [('0', '')])
+    if chain.properties(fst.CYCLIC, True) == fst.CYCLIC:
+        raise FstError('FST is cyclic.')
+    paths = dfs(chain, [(chain.start(), 0)])
     strings = []
     for path in paths:
-        strings.append(''.join([l for (_, l) in path]))
+        strings.append(''.join([table.find(k).decode('utf-8') for (_, k) in path if k]))
     return strings
 
+
 def string_to_symbol_list(string, symbols):
-    regex = re.compile('|'.join(sorted(symbols, key=len)))
-    elements = regex.findall(string)
-    if ''.join(elements) == string:
-        return elements
-    else:
-        raise IllegalSymbol(f'Symbol in "{s}" not found in symbol table')
+    elements = []
+    symbols = sorted(symbols, key=len, reverse=True)
+    while string:
+        matched = False
+        for symbol in symbols:
+            if symbol == string[0:len(symbol)]:
+                elements.append(symbol)
+                string = string[len(symbol):]
+                matched = True
+                break
+        if not matched:
+            raise IllegalSymbol(f'Substring "{string}" starts with an unknown symbol')
+    return elements
 
 
-def apply(string, automata_op):
-    elements = string_to_symbols_list(string)
+def apply(string, automata_op, symbols):
+    elements = string_to_symbol_list(string, symbols)
     chain = apply_fst_to_list(elements, automata_op)
-    dag = chain_fst_to_dag(chain)
-    return all_strings_from_dag(dag)
+    strings = all_strings_from_chain(chain, symbols_table_from_alphabet(symbols))
+    return strings
+
 
 def main():
-    f_ST = symbols_table_from_alphabet('ABCabc')
-    compiler = fst.Compiler(isymbols=f_ST, osymbols=f_ST, keep_isymbols=True, keep_osymbols=True)
+    symbols = list('ABCabc') + ['+Guess']
+    symb_tab = symbols_table_from_alphabet(symbols)
+    compiler = fst.Compiler(isymbols=symb_tab, osymbols=symb_tab, keep_isymbols=True, keep_osymbols=True)
     definition = """0 0 a A
 0 0 a c
 0 0 b b
-0"""
+0 1 b +Guess
+0
+1"""
     print(definition, file=compiler)
     caps_A = compiler.compile()
-    print(apply('abab', caps_A))
+    print(apply('abab', caps_A, symbols))
 
 if __name__ == '__main__':
     main()
