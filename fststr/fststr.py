@@ -117,6 +117,15 @@ def string_to_symbol_list(string, symbols):
 
 
 def apply(string, automata_op, symbols):
+    """Apply an FST to a string and get back the transduced strings
+
+    Args:
+        string (str): the string to which the FST is applied
+        automata_op: the FST applied to the string
+        symbols: the input and output alphabet as a list
+    Returns:
+        list: strings that result from the application of the FST to the string
+    """
     elements = string_to_symbol_list(string, symbols)
     chain = apply_fst_to_list(elements, automata_op)
     strings = all_strings_from_chain(chain, symbols_table_from_alphabet(symbols))
