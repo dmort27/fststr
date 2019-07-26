@@ -11,6 +11,8 @@ class IllegalSymbol(Exception):
 class FstError(Exception):
     pass
 
+EN_SYMB = list("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-''") + \
+    ['+Known', '+Guess']
 
 def symbols_table_from_alphabet(alphabet):
     st = fst.SymbolTable()
@@ -61,7 +63,15 @@ def apply_fst_to_list(elements, automata_op, is_project=True, **kwargs):
     return out
 
 
-def all_strings_from_chain(chain, table):
+def all_strings_from_chain(chain, symb_tab):
+    """Return all strings implied by a non-cyclic automaton
+
+    Args:
+        chain (Fst): a non-cyclic finite state automaton
+        symb_tab: the symbols table for chain
+    Returns:
+        (list): a list of strings
+    """
     def dfs(graph, path, paths=[]):
         target, label = path[-1]
         if graph.num_arcs(target):
@@ -78,11 +88,19 @@ def all_strings_from_chain(chain, table):
     paths = dfs(chain, [(chain.start(), 0)])
     strings = []
     for path in paths:
-        strings.append(''.join([table.find(k).decode('utf-8') for (_, k) in path if k]))
+        strings.append(''.join([symb_tab.find(k).decode('utf-8') for (_, k) in path if k]))
     return strings
 
 
 def string_to_symbol_list(string, symbols):
+    """Return a tokenization of a string into symbols
+
+    Args:
+        string (str): the string to be tokenized
+        sybmols (list): the symbols into which the string can be divided
+    Returns:
+        (list): a list of symbols
+    """
     elements = []
     symbols = sorted(symbols, key=len, reverse=True)
     while string:
