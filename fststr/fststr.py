@@ -52,6 +52,13 @@ def apply_fst(elements, automata_op, is_project=True, **kwargs):
     return out
 
 def chain_fst_to_dag(f):
+    """Converts an acyclic FST to a DAG represented as a dict
+
+    Args:
+        f (Fst): an acyclic FST
+    Returns:
+        dict: a dictionary-representation of the same network
+    """
     dag = defaultdict(list)
     for transition in f.__str__().decode('utf-8').split('\n'):
         try:
@@ -62,6 +69,13 @@ def chain_fst_to_dag(f):
     return dag
 
 def all_strings_from_dag(dag):
+    """Extracts all strings corresponding to paths in a DAG
+
+    Args:
+        dag (dict): a dictionary; values are (state, label) pairs
+    Returns:
+        list: strings corresponding to each path through the input DAG
+    """
     def dfs(data, path, paths=[]):
         target, label = path[-1]
         if target in data:
