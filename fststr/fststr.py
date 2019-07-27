@@ -12,7 +12,7 @@ class FstError(Exception):
     pass
 
 EN_SYMB = list("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-''") + \
-    ['+Known', '+Guess', '<any>', '<other>']
+    ['+Known', '+Guess', '<other>', '<c>', '<v>']
 
 def symbols_table_from_alphabet(alphabet):
     st = fst.SymbolTable()
@@ -21,7 +21,7 @@ def symbols_table_from_alphabet(alphabet):
         st.add_symbol(symb, i+1)
     return st
 
-def all_nodes(automaton):
+def all_states(automaton):
     def dfs(graph, start):
         visited, stack = set(), [start]
         while stack:
@@ -32,6 +32,38 @@ def all_nodes(automaton):
                     stack.append(arc.nextstate)
         return visited
     return dfs(automaton, 0)
+
+def expand_other_symbols(automaton):
+    symbols = automaton.input_symbols().copy()
+    symb_map = {symb.decode('utf-8'): n for (n, symb) in symbols}
+    other = symb_map['<other>']
+    epsilon = symb_map['<epsilon>']
+    keys = {n for (n, _) in symbols} - {other, epsilon}
+    def dfs(start):
+        visited, stack = set(), [start]
+        while stack:
+            state = stack.pop()
+            if state not in visited:
+                visited.add(state)
+                arcs = defaultdict(set)
+                all_labels = set()
+                for arc in automaton.arcs(state):
+                    arcs[arc.nextstate].add(arc.ilabel)
+                    all_labels.add(arc.ilabel)
+                for nextstate, ilabels in arcs.items():
+                    if other in ilabels:
+                        for ilabel in (keys - all_labels - {other, epsilon}):
+                            automaton.add_arc(
+                                state,
+                                fst.Arc(ilabel, ilabel, fst.Weight.One(automaton.weight_type()),
+                                nextstate))
+        return visited
+    dfs(automaton.start())
+    print(automaton.__str__().decode('utf-8'))
+    return None
+
+                
+
 
 def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
     """Produce a linear automata.
@@ -55,7 +87,7 @@ def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
     return compiler.compile()
 
 
-def apply_fst_to_list(elements, automata_op, is_project=True, **kwargs):
+def apply_fst_to_list(elements, automaton, is_project=True, **kwargs):
     """Compose a linear automata generated from `elements` with `automata_op`.
 
     Based on code from https://stackoverflow.com/questions/9390536/how-do-you-even-give-an-openfst-made-fst-input-where-does-the-output-go.
@@ -67,19 +99,18 @@ def apply_fst_to_list(elements, automata_op, is_project=True, **kwargs):
         kwargs:
             Additional arguments to the compiler of the linear automata .
     """
-    linear_automata = linear_fst(elements, automata_op, **kwargs)
-    out = fst.compose(linear_automata, automata_op)
+    linear_automata = linear_fst(elements, automaton, **kwargs)
+    out = fst.compose(linear_automata, automaton)
     if is_project:
         out.project(project_output=True)
     return out
 
 
-def all_strings_from_chain(chain, symb_tab):
+def all_strings_from_chain(automaton):
     """Return all strings implied by a non-cyclic automaton
 
     Args:
         chain (Fst): a non-cyclic finite state automaton
-        symb_tab: the symbols table for chain
     Returns:
         (list): a list of strings
     """
@@ -94,9 +125,11 @@ def all_strings_from_chain(chain, symb_tab):
         else:
             paths += [path]
         return paths
-    if chain.properties(fst.CYCLIC, True) == fst.CYCLIC:
+    if automaton.properties(fst.CYCLIC, True) == fst.CYCLIC:
         raise FstError('FST is cyclic.')
-    paths = dfs(chain, [(chain.start(), 0)])
+    start = automaton.start()
+    paths = dfs(automaton, [(start, 0)])
+    symb_tab = automaton.input_symbols().copy()
     strings = []
     for path in paths:
         strings.append(''.join([symb_tab.find(k).decode('utf-8') for (_, k) in path if k]))
@@ -123,41 +156,46 @@ def string_to_symbol_list(string, symbols):
                 matched = True
                 break
         if not matched:
-            raise IllegalSymbol(f'Substring "{string}" starts with an unknown symbol')
+            raise IllegalSymbol('Substring "{}" starts with an unknown symbol'.format(string))
     return elements
 
 
-def apply(string, automata_op, symbols):
+def apply(string, automaton):
     """Apply an FST to a string and get back the transduced strings
 
     Args:
         string (str): the string to which the FST is applied
-        automata_op: the FST applied to the string
-        symbols: the input and output alphabet as a list
+        automaton: the FST applied to the string
     Returns:
         list: strings that result from the application of the FST to the string
     """
+    symbols = [x.decode('utf-8') for (_, x) in automaton.input_symbols()]
     elements = string_to_symbol_list(string, symbols)
-    chain = apply_fst_to_list(elements, automata_op)
-    strings = all_strings_from_chain(chain, symbols_table_from_alphabet(symbols))
-    return strings
+    lattice = apply_fst_to_list(elements, automaton)
+    if lattice.start() > -1:
+        strings = all_strings_from_chain(lattice)
+        return strings
+    else:
+        return []
 
 
 def main():
-    symbols = list('ABCabc') + ['+Guess']
+    symbols = EN_SYMB
     symb_tab = symbols_table_from_alphabet(symbols)
     compiler = fst.Compiler(isymbols=symb_tab, osymbols=symb_tab, keep_isymbols=True, keep_osymbols=True)
-    definition = """0 0 a A
-0 0 a c
-0 0 b b
-0 1 b +Guess
-0 2 a B
-0
-1"""
+    definition = """0 1 <other> <other>
+1 2 b B
+0 2 a A
+2"""
     print(definition, file=compiler)
-    caps_A = compiler.compile()
-    print(all_nodes(caps_A))
-    print(apply('abab', caps_A, symbols))
+    scramble = compiler.compile()
+    expand_other_symbols(scramble)
+    print('a -> ', apply('a', scramble))
+    print('bb -> ', apply('bb', scramble))
+    print('cb -> ', apply('cb', scramble))
+    print('ab -> ', apply('ab', scramble))
+    print('aa -> ', apply('aa', scramble))
+    print('dd -> ', apply('dd', scramble))
 
 if __name__ == '__main__':
     main()
