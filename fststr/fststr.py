@@ -12,7 +12,7 @@ class FstError(Exception):
     pass
 
 EN_SYMB = list("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-''") + \
-    ['+Known', '+Guess']
+    ['+Known', '+Guess', '<any>', '<other>']
 
 def symbols_table_from_alphabet(alphabet):
     st = fst.SymbolTable()
@@ -21,6 +21,17 @@ def symbols_table_from_alphabet(alphabet):
         st.add_symbol(symb, i+1)
     return st
 
+def all_nodes(automaton):
+    def dfs(graph, start):
+        visited, stack = set(), [start]
+        while stack:
+            vertex = stack.pop()
+            if vertex not in visited:
+                visited.add(vertex)
+                for arc in graph.arcs(vertex):
+                    stack.append(arc.nextstate)
+        return visited
+    return dfs(automaton, 0)
 
 def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
     """Produce a linear automata.
@@ -140,10 +151,12 @@ def main():
 0 0 a c
 0 0 b b
 0 1 b +Guess
+0 2 a B
 0
 1"""
     print(definition, file=compiler)
     caps_A = compiler.compile()
+    print(all_nodes(caps_A))
     print(apply('abab', caps_A, symbols))
 
 if __name__ == '__main__':
