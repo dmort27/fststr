@@ -1,6 +1,24 @@
  #!/usr/bin/env python3
-from collections import defaultdict
+"""FstStr: A python module for operating on strings using OpenFST (pywrapfst)
 
+This module provies a variety of different functions to make it easier to
+process strings using OpenFST. OpenFST is powerful, but it is also very general,
+and it is not immediately obvious how a user would use an FST compiled with
+OpenFST to transduce strings. FstStr makes this easier by doing the tedious part
+for you (so you can concentrate on building beautiful FSTs).
+
+Generally, a workflow with FstStr is as follows:
+1. Define a symbol set and generate a symbol table from it.
+2. Compile one or more FSTs. Combine these FSTs via composition/union/concatentation/etc.
+3. Apply the resulting transducer to strings
+  (a) Convert a string to a list of symbols and the list of symbols to a linear-chain automaton
+  (b) Compose the FST from 2 with this automaton
+  (c) Extract the unique paths through the resulting lattice
+  (d) Convert these to strings
+With FstStr, Step 3 is wrapped up in a single convenience function, apply
+"""
+
+from collections import defaultdict
 import pywrapfst as fst
 
 
@@ -35,11 +53,12 @@ def symbols_table_from_alphabet(alphabet):
 def string_to_symbol_list(string, symbols):
     """Return a tokenization of a string into symbols
 
-    Args:
-        string (str): the string to be tokenized
-        sybmols (list): the symbols into which the string can be divided
-    Returns:
-        (list): a list of symbols
+    Before a string can be converted to a linear-chain automaton, it must be
+    decomposed into symbols. Some of these symbols may consist of a single
+    character while others may consist of multiple characters.
+
+    Args: string (str): the string to be tokenized sybmols (list): the symbols
+        into which the string can be divided Returns: (list): a list of symbols
     """
     elements = []
     symbols = sorted(symbols, key=len, reverse=True)
@@ -61,12 +80,12 @@ def string_to_symbol_list(string, symbols):
 def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
     """Produce a linear automata.
 
-    Based on code from https://stackoverflow.com/questions/9390536/how-do-you-even-give-an-openfst-made-fst-input-where-does-the-output-go.
+    Based on code from
+    https://stackoverflow.com/questions/9390536/how-do-you-even-give-an-openfst-made-fst-input-where-does-the-output-go.
 
-    Args:
-        elements (list): ordered list of input symbols
-        automata_op (Fst): automaton to apply
-        keep_isymbols (bool): whether to keep the input symbols
+    Args: elements (list): ordered list of input symbols automata_op (Fst):
+        automaton to apply keep_isymbols (bool): whether to keep the input
+        symbols
     """
     compiler = fst.Compiler(isymbols=automata_op.input_symbols().copy(),
                             acceptor=keep_isymbols,
@@ -84,14 +103,12 @@ def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
 def expand_other_symbols(automaton):
     """Adds arcs between states with an arc labeled <other>.
 
-    If there is an arc a1 going from a state q1 to another
-    state q2 and a1 has the ilabel <other>, this function
-    will mutate the FST such that there are additional
-    arcs between q1 and q2 with each label not represented
-    among the out-going arcs from q1.
+    If there is an arc a1 going from a state q1 to another state q2 and a1 has
+    the ilabel <other>, this function will mutate the FST such that there are
+    additional arcs between q1 and q2 with each label not represented among the
+    out-going arcs from q1.
 
-    Args:
-        automaton (Fst): FST to be mutated
+    Args: automaton (Fst): FST to be mutated
     """
     symbols = automaton.input_symbols().copy()
     symb_map = {symb.decode('utf-8'): n for (n, symb) in symbols}
@@ -120,14 +137,13 @@ def expand_other_symbols(automaton):
 def apply_fst_to_list(elements, automaton, is_project=True, **kwargs):
     """Compose a linear automata generated from `elements` with `automata_op`.
 
-    Based on code from https://stackoverflow.com/questions/9390536/how-do-you-even-give-an-openfst-made-fst-input-where-does-the-output-go.
+    Based on code from
+    https://stackoverflow.com/questions/9390536/how-do-you-even-give-an-openfst-made-fst-input-where-does-the-output-go.
 
-    Args:
-        elements (list): ordered list of edge symbols for a linear automata.
-        automata_op (Fst): automata that will be applied.
-        is_project (bool, optional): whether to keep only the output labels.
-        kwargs:
-            Additional arguments to the compiler of the linear automata .
+    Args: elements (list): ordered list of edge symbols for a linear automata.
+        automata_op (Fst): automata that will be applied. is_project (bool,
+        optional): whether to keep only the output labels. kwargs: Additional
+        arguments to the compiler of the linear automata .
     """
     linear_automata = linear_fst(elements, automaton, **kwargs)
     out = fst.compose(linear_automata, automaton)
@@ -192,14 +208,20 @@ def apply(string, automaton):
 def main():
     symbols = EN_SYMB
     symb_tab = symbols_table_from_alphabet(symbols)
+    # Construct compiler
     compiler = fst.Compiler(isymbols=symb_tab, osymbols=symb_tab, keep_isymbols=True, keep_osymbols=True)
-    definition = """0 1 <other> <other>
+    # Define transition table and print it to the compiler
+    definition = \
+"""0 1 <other> <other>
 1 2 b B
 0 2 a A
 2"""
     print(definition, file=compiler)
+    # Compile the description, returning an Fst object
     scramble = compiler.compile()
+    # Add transitions implied by <other>
     expand_other_symbols(scramble)
+    # Apply the transducer to various inputs
     print('a -> ', apply('a', scramble))
     print('bb -> ', apply('bb', scramble))
     print('cb -> ', apply('cb', scramble))
