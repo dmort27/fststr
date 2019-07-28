@@ -15,7 +15,10 @@ Generally, a workflow with FstStr is as follows:
   (b) Compose the FST from 2 with this automaton
   (c) Extract the unique paths through the resulting lattice
   (d) Convert these to strings
-With FstStr, Step 3 is wrapped up in a single convenience function, apply
+With FstStr, Step 3 is wrapped up in a single convenience function, apply:
+
+>>> fststr.apply('abc', capitalize)
+['ABC']
 """
 
 from collections import defaultdict
