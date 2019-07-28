@@ -11,59 +11,52 @@ class IllegalSymbol(Exception):
 class FstError(Exception):
     pass
 
+# Managing symbol tables and symbol lists
+
+"""A list of symbols for English"""
 EN_SYMB = list("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-''") + \
     ['+Known', '+Guess', '<other>', '<c>', '<v>']
 
 def symbols_table_from_alphabet(alphabet):
+    """Construct a SymbolTable from a list of strings.
+
+    Args:
+        alphabet: a list of strings to be treated as symbols
+
+    Returns:
+        SymbolTable: a symbol table with <epsilon> plus the symbols in strings.
+    """
     st = fst.SymbolTable()
     st.add_symbol('<epsilon>', 0)
     for i, symb in enumerate(alphabet):
         st.add_symbol(symb, i+1)
     return st
 
-def all_states(automaton):
-    def dfs(graph, start):
-        visited, stack = set(), [start]
-        while stack:
-            vertex = stack.pop()
-            if vertex not in visited:
-                visited.add(vertex)
-                for arc in graph.arcs(vertex):
-                    stack.append(arc.nextstate)
-        return visited
-    return dfs(automaton, 0)
+def string_to_symbol_list(string, symbols):
+    """Return a tokenization of a string into symbols
 
-def expand_other_symbols(automaton):
-    symbols = automaton.input_symbols().copy()
-    symb_map = {symb.decode('utf-8'): n for (n, symb) in symbols}
-    other = symb_map['<other>']
-    epsilon = symb_map['<epsilon>']
-    keys = {n for (n, _) in symbols} - {other, epsilon}
-    def dfs(start):
-        visited, stack = set(), [start]
-        while stack:
-            state = stack.pop()
-            if state not in visited:
-                visited.add(state)
-                arcs = defaultdict(set)
-                all_labels = set()
-                for arc in automaton.arcs(state):
-                    arcs[arc.nextstate].add(arc.ilabel)
-                    all_labels.add(arc.ilabel)
-                for nextstate, ilabels in arcs.items():
-                    if other in ilabels:
-                        for ilabel in (keys - all_labels - {other, epsilon}):
-                            automaton.add_arc(
-                                state,
-                                fst.Arc(ilabel, ilabel, fst.Weight.One(automaton.weight_type()),
-                                nextstate))
-        return visited
-    dfs(automaton.start())
-    print(automaton.__str__().decode('utf-8'))
-    return None
+    Args:
+        string (str): the string to be tokenized
+        sybmols (list): the symbols into which the string can be divided
+    Returns:
+        (list): a list of symbols
+    """
+    elements = []
+    symbols = sorted(symbols, key=len, reverse=True)
+    while string:
+        matched = False
+        for symbol in symbols:
+            if symbol == string[0:len(symbol)]:
+                elements.append(symbol)
+                string = string[len(symbol):]
+                matched = True
+                break
+        if not matched:
+            raise IllegalSymbol('Substring "{}" starts with an unknown symbol'.format(string))
+    return elements
 
-                
 
+# Constructing FSTs
 
 def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
     """Produce a linear automata.
@@ -86,6 +79,43 @@ def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
 
     return compiler.compile()
 
+# Mutating FSTs
+
+def expand_other_symbols(automaton):
+    """Adds arcs between states with an arc labeled <other>.
+
+    If there is an arc a1 going from a state q1 to another
+    state q2 and a1 has the ilabel <other>, this function
+    will mutate the FST such that there are additional
+    arcs between q1 and q2 with each label not represented
+    among the out-going arcs from q1.
+
+    Args:
+        automaton (Fst): FST to be mutated
+    """
+    symbols = automaton.input_symbols().copy()
+    symb_map = {symb.decode('utf-8'): n for (n, symb) in symbols}
+    other = symb_map['<other>']
+    epsilon = symb_map['<epsilon>']
+    keys = {n for (n, _) in symbols} - {other, epsilon}
+    def dfs(start):
+        visited, stack = set(), [start]
+        while stack:
+            state = stack.pop()
+            if state not in visited:
+                visited.add(state)
+                arcs = {arc.ilabel: arc.nextstate for arc in automaton.arcs(state)}
+                if other in arcs:
+                    nextstate = arcs[other]
+                    for symb in keys - set(arcs) - {epsilon, other}:
+                        automaton.add_arc(
+                                state,
+                                fst.Arc(symb, symb, fst.Weight.One(automaton.weight_type()),
+                                nextstate))
+    dfs(automaton.start())
+    return None
+
+# Operating on FSTs
 
 def apply_fst_to_list(elements, automaton, is_project=True, **kwargs):
     """Compose a linear automata generated from `elements` with `automata_op`.
@@ -105,6 +135,8 @@ def apply_fst_to_list(elements, automaton, is_project=True, **kwargs):
         out.project(project_output=True)
     return out
 
+
+# Extracting strings from FSTs
 
 def all_strings_from_chain(automaton):
     """Return all strings implied by a non-cyclic automaton
@@ -136,29 +168,7 @@ def all_strings_from_chain(automaton):
     return strings
 
 
-def string_to_symbol_list(string, symbols):
-    """Return a tokenization of a string into symbols
-
-    Args:
-        string (str): the string to be tokenized
-        sybmols (list): the symbols into which the string can be divided
-    Returns:
-        (list): a list of symbols
-    """
-    elements = []
-    symbols = sorted(symbols, key=len, reverse=True)
-    while string:
-        matched = False
-        for symbol in symbols:
-            if symbol == string[0:len(symbol)]:
-                elements.append(symbol)
-                string = string[len(symbol):]
-                matched = True
-                break
-        if not matched:
-            raise IllegalSymbol('Substring "{}" starts with an unknown symbol'.format(string))
-    return elements
-
+# High-level convenience functions
 
 def apply(string, automaton):
     """Apply an FST to a string and get back the transduced strings
@@ -172,7 +182,7 @@ def apply(string, automaton):
     symbols = [x.decode('utf-8') for (_, x) in automaton.input_symbols()]
     elements = string_to_symbol_list(string, symbols)
     lattice = apply_fst_to_list(elements, automaton)
-    if lattice.start() > -1:
+    if lattice.num_states() > 0:
         strings = all_strings_from_chain(lattice)
         return strings
     else:
