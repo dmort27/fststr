@@ -83,3 +83,6 @@ Consider the following example:
 
 Note that the arc labeled `<other>` will not be deleted, but this does not
 matter as long as the input string does not contain the sequence "<other>".
+
+Other, similar wildcard symbols can be defined and used following the example of
+`<other>`.
