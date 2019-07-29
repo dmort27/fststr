@@ -1,5 +1,5 @@
  #!/usr/bin/env python3
-"""FstStr: A python module for operating on strings using OpenFST (pywrapfst)
+"""FstrStrngr: A python module for operating on strings using OpenFST (pywrapfst)
 
 This module provies a variety of different functions to make it easier to
 process strings using OpenFST. OpenFST is powerful, but it is also very general,
