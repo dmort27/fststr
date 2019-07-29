@@ -50,3 +50,36 @@ transition table by calling the `compile` method:
 >>> print('0 1 a b\n1 2 b c\n2 3 c d\n3', file=compiler)
 >>> abc2bcd = compiler.compile()
 ```
+
+Some shortcuts are often taken when defining FSTs. One is to use “other” as a
+label on arcs, meaning that there is a transition with the label *x*:*x* for
+every *x* not in the set of outgoing arcs from that state. This relieves the
+author of the FST from the tedious and error-prone process of defining these
+arcs manually. OpenFST does not support this notation directly, but `fststr`
+provides a function that will take an FST including the symbol `<other>` and
+mutate it so that the arcs with `<other>` are paralleled by the implied arc.
+Consider the following example:
+
+```python
+>>> st = fststr.symbols_table_from_alphabet(alphabet)
+>>> alphabet = ['A', 'a', 'b', 'c', '<other>']
+>>> st = fststr.symbols_table_from_alphabet(alphabet)
+>>> compiler = fst.Compiler(isymbols=st, osymbols=st, keep_isymbols=True, keep_osymbols=True)
+>>> compiler.write('0 1 a A\n0 1 <other> <other>\n1\n')
+>>> other = compiler.compile()
+>>> print(other.__str__().decode('utf-8'))
+0       1       a       A
+0       1       <other> <other>
+1
+>>> fststr.expand_other_symbols(other)
+>>> print(other.__str__().decode('utf-8'))
+0       1       a       A
+0       1       <other> <other>
+0       1       A       A
+0       1       b       b
+0       1       c       c
+1
+```
+
+Note that the arc labeled `<other>` will not be deleted, but this does not
+matter as long as the input string does not contain the sequence "<other>".
