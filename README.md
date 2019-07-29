@@ -86,3 +86,33 @@ matter as long as the input string does not contain the sequence "<other>".
 
 Other, similar wildcard symbols can be defined and used following the example of
 `<other>`.
+
+### Application
+
+Once you have an FST, you can apply it to a string. In reality, this is a four-step process:
+
+1. Convert a string to a list of symbols and the list of symbols to a linear-chain automaton
+2. Compose the FST from 2 with this automaton
+3. Extract the unique paths through the resulting lattice
+4. Convert these to strings
+
+FstStr provides functions for doing each of these things and also provides a
+single convenience function, `apply` that does all of them. This allows the
+programmer to simply take a string, apply and FST to it, and get back the
+resulting strings.
+
+```python
+>>> st = fststr.symbols_table_from_alphabet(['a', 'b', 'c', 'd', '<other>'])
+>>> compiler = fst.Compiler(isymbols=st, osymbols=st, keep_isymbols=True, keep_osymbols=True)
+>>> compiler.write('0 1 a <epsilon>\n0 1 <other> <other>\n1\n')
+>>> del_a = compiler.compile()
+>>> fststr.expand_other_symbols(del_a)
+>>> fststr.apply('a', del_a)
+['']
+>>> fststr.apply('b', del_a)
+['b']
+>>> fststr.apply('c', del_a)
+['c']
+>>> fststr.apply('d', del_a)
+['d']
+```
