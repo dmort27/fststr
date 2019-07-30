@@ -109,7 +109,8 @@ def expand_other_symbols(automaton):
     If there is an arc a1 going from a state q1 to another state q2 and a1 has
     the ilabel <other>, this function will mutate the FST such that there are
     additional arcs between q1 and q2 with each label not represented among the
-    out-going arcs from q1.
+    out-going arcs from q1. This routine does not create arcs for special
+    symbols wrapped in angle brakers (like <epsilon>, <^>, or <#>).
 
     Args: automaton (Fst): FST to be mutated
     """
@@ -117,7 +118,8 @@ def expand_other_symbols(automaton):
     symb_map = {symb.decode('utf-8'): n for (n, symb) in symbols}
     other = symb_map['<other>']
     epsilon = symb_map['<epsilon>']
-    keys = {n for (n, _) in symbols} - {other, epsilon}
+    special = {n for (symb, n) in symb_map.items() if symb[0] == '<' and symb[-1] == '>'}
+    keys = {n for (n, _) in symbols} - special
     def dfs(start):
         visited, stack = set(), [start]
         while stack:
@@ -128,7 +130,7 @@ def expand_other_symbols(automaton):
                 stack.extend([arc.nextstate for arc in automaton.arcs(state)])
                 if other in arcs:
                     nextstate = arcs[other]
-                    for symb in keys - set(arcs) - {epsilon, other}:
+                    for symb in keys - set(arcs):
                         automaton.add_arc(
                                 state,
                                 fst.Arc(symb, symb, fst.Weight.One(automaton.weight_type()),
