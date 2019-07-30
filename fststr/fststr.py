@@ -36,7 +36,7 @@ class FstError(Exception):
 
 """A list of symbols for English"""
 EN_SYMB = list("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-''") + \
-    ['+Known', '+Guess', '<other>', '<c>', '<v>']
+    ['+Known', '+Guess', '<other>', '<C>', '<V>', '<^>', '<#>']
 
 def symbols_table_from_alphabet(alphabet):
     """Construct a SymbolTable from a list of strings.
@@ -125,6 +125,7 @@ def expand_other_symbols(automaton):
             if state not in visited:
                 visited.add(state)
                 arcs = {arc.ilabel: arc.nextstate for arc in automaton.arcs(state)}
+                stack.extend([arc.nextstate for arc in automaton.arcs(state)])
                 if other in arcs:
                     nextstate = arcs[other]
                     for symb in keys - set(arcs) - {epsilon, other}:
@@ -209,7 +210,7 @@ def apply(string, automaton):
 
 
 def main():
-    symbols = EN_SYMB
+    symbols = list('abcABC') + ['<other>']
     symb_tab = symbols_table_from_alphabet(symbols)
     # Construct compiler
     compiler = fst.Compiler(isymbols=symb_tab, osymbols=symb_tab, keep_isymbols=True, keep_osymbols=True)
@@ -217,20 +218,23 @@ def main():
     definition = \
 """0 1 <other> <other>
 1 2 b B
+1 0 <other> <other>
 0 2 a A
-2"""
+2
+0
+"""
     print(definition, file=compiler)
     # Compile the description, returning an Fst object
     scramble = compiler.compile()
     # Add transitions implied by <other>
     expand_other_symbols(scramble)
+    print(scramble.__str__().decode('utf-8'))
     # Apply the transducer to various inputs
     print('a -> ', apply('a', scramble))
     print('bb -> ', apply('bb', scramble))
     print('cb -> ', apply('cb', scramble))
     print('ab -> ', apply('ab', scramble))
     print('aa -> ', apply('aa', scramble))
-    print('dd -> ', apply('dd', scramble))
-
+    
 if __name__ == '__main__':
     main()
