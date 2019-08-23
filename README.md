@@ -116,3 +116,16 @@ resulting strings.
 >>> fststr.apply('d', del_a)
 ['d']
 ```
+
+### Example
+Examples are in `/examples/FSTs`. We will examine `silent-e-deletion.txt`. The FST takes in morphologically separated inputs like `make<^>ing` and deletes the e to output `mak<^>ing`.
+
+Each line of the file represents information about the FST. 
+
+The first line `0 0 <other> <other>` represents an arc from state q0 to q0 with the value `<other> : <other>`. 
+  
+The second line `0` rrepresents that q0 is a final state. 
+
+The third line `0 7 e e` represents an arc from state q0 to state q7 with the value `e : e`.
+  
+Here is a fully drawn out example of the FST: ![Image of FST](https://i.imgur.com/XyYVlp9.png)
