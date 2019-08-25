@@ -116,3 +116,24 @@ resulting strings.
 >>> fststr.apply('d', del_a)
 ['d']
 ```
+
+### Example
+Examples are in `examples/FSTs`. We will examine `e-insertion.txt`, which is 
+based off of the e-insertion FST from the textbook. The FST takes in morphologically
+separated inputs like `fox<^>si#` and outputs `foxes<#>`.
+
+Each line of the file represents information about the FST.
+
+The first line `0` represents that q0 is a final state
+
+The second line `0 0 <other> <other>` represents an arc from q0 to q0 with the value `<other> : <other>`
+
+The fifth line `0 1 z z` represents an arc from q0 to q1 with the value `z : z`
+
+Here is the fully drawn out example of the FST from the textbook:
+
+![image of FST](https://i.imgur.com/GstyJuh.jpg)
+
+Note: The textbook does not account for e-insertion rule with `ch` or `sh`, we
+have chosen to use it in our example. To run the FST, you must also add `ch` and
+`sh` into your FST symbol table.
