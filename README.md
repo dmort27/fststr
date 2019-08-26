@@ -120,7 +120,7 @@ resulting strings.
 ### Example
 Examples are in `examples/FSTs`. We will examine `e-insertion.txt`, which is 
 based off of the e-insertion FST from the textbook. The FST takes in morphologically
-separated inputs like `fox<^>si#` and outputs `foxes<#>`.
+separated inputs like `fox<^>s<#>` and outputs `foxes<#>`.
 
 Each line of the file represents information about the FST.
 
