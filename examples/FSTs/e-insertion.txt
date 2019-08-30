@@ -1,6 +1,5 @@
 0
 0 0 <other> <other>
-0 0 <^> <epsilon>
 0 0 <#> <#>
 0 1 z z
 0 1 s s
