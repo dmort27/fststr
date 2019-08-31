@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 0 0 <^> <^>
 0 0 <#> <#>
 0 0 <other> <other>
@@ -12,13 +13,49 @@
 1 1 z z
 1 2 <^> <^>
 1
+=======
+0
+0 0 <other> <other>
+0 0 <#> <#>
+0 1 z z
+0 1 s s
+0 1 x x
+0 1 ch ch
+0 1 sh sh
+1
+1 0 <#> <#>
+1 0 <other> <other>
+1 1 z z
+1 1 s s
+1 1 x x
+1 1 ch ch
+1 1 sh sh
+1 2 <^> <epsilon>
+2
+>>>>>>> 400c9273b96c58540554db08015a7c3cbef8fad2
 2 0 <#> <#>
 2 0 <other> <other>
 2 1 z z
 2 1 x x
+<<<<<<< HEAD
 2 5 s s
 5 2 <^> <^>
 2 3 <epsilon> e
 2
 3 4 s s
 4 0 <#> <#>
+=======
+2 1 ch ch
+2 1 sh sh
+2 3 <epsilon> e
+2 5 s s
+3 4 s s
+4 0 <#> <#>
+5 0 <other> <other>
+5 1 z z
+5 1 s s
+5 1 x x
+5 1 ch ch
+5 1 sh sh
+5 2 <^> <epsilon>
+>>>>>>> 400c9273b96c58540554db08015a7c3cbef8fad2

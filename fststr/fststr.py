@@ -126,14 +126,21 @@ def expand_other_symbols(automaton):
             state = stack.pop()
             if state not in visited:
                 visited.add(state)
-                arcs = {arc.ilabel: arc.nextstate for arc in automaton.arcs(state)}
+                arcs = {}
+                for arc in automaton.arcs(state):
+                    arcs[arc.ilabel] = {
+                        'olabel': arc.olabel,
+                        'nextstate': arc.nextstate
+                    }
                 stack.extend([arc.nextstate for arc in automaton.arcs(state)])
                 if other in arcs:
-                    nextstate = arcs[other]
+                    nextstate = arcs[other]['nextstate']
                     for symb in keys - set(arcs):
+                        olabel = arcs[other]['olabel']
+                        olabel = symb if olabel == other else olabel
                         automaton.add_arc(
                                 state,
-                                fst.Arc(symb, symb, fst.Weight.One(automaton.weight_type()),
+                                fst.Arc(symb, olabel, fst.Weight.One(automaton.weight_type()),
                                 nextstate))
     dfs(automaton.start())
     return None
@@ -220,7 +227,7 @@ def main():
     definition = \
 """0 1 <other> <other>
 1 2 b B
-1 0 <other> <other>
+1 0 <other> <epsilon>
 0 2 a A
 2
 0
@@ -228,12 +235,16 @@ def main():
     print(definition, file=compiler)
     # Compile the description, returning an Fst object
     scramble = compiler.compile()
+    print('original fst')
+    print(scramble.__str__().decode('utf-8'))
     # Add transitions implied by <other>
     expand_other_symbols(scramble)
+    print('expanded fst')
     print(scramble.__str__().decode('utf-8'))
     # Apply the transducer to various inputs
     print('a -> ', apply('a', scramble))
     print('bb -> ', apply('bb', scramble))
+    print('bbcdefg -> ', apply('bb', scramble))
     print('cb -> ', apply('cb', scramble))
     print('ab -> ', apply('ab', scramble))
     print('aa -> ', apply('aa', scramble))
