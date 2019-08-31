@@ -130,10 +130,6 @@ The second line `0 0 <other> <other>` represents an arc from q0 to q0 with the v
 
 The fifth line `0 1 z z` represents an arc from q0 to q1 with the value `z : z`
 
-Here is the fully drawn out example of the FST from the textbook:
-
-![image of FST](https://i.imgur.com/GstyJuh.jpg)
-
 Note: The textbook does not account for e-insertion rule with `ch` or `sh`, we
 have chosen to use it in our example. To run the FST, you must also add `ch` and
 `sh` into your FST symbol table.
