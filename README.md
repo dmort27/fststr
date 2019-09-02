@@ -130,6 +130,4 @@ The second line `0 0 <other> <other>` represents an arc from q0 to q0 with the v
 
 The fifth line `0 1 z z` represents an arc from q0 to q1 with the value `z : z`
 
-Note: The textbook does not account for e-insertion rule with `ch` or `sh`, we
-have chosen to use it in our example. To run the FST, you must also add `ch` and
-`sh` into your FST symbol table.
+See e-insertion.py for an example of how to run the FST.
