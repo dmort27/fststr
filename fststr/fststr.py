@@ -115,7 +115,7 @@ def expand_other_symbols(automaton):
     Args: automaton (Fst): FST to be mutated
     """
     symbols = automaton.input_symbols().copy()
-    symb_map = {symb.decode('utf-8'): n for (n, symb) in symbols}
+    symb_map = {symb: n for (n, symb) in symbols}
     other = symb_map['<other>']
     epsilon = symb_map['<epsilon>']
     special = {n for (symb, n) in symb_map.items() if symb[0] == '<' and symb[-1] == '>'}
@@ -140,8 +140,7 @@ def expand_other_symbols(automaton):
                         olabel = symb if olabel == other else olabel
                         automaton.add_arc(
                                 state,
-                                fst.Arc(symb, olabel, fst.Weight.One(automaton.weight_type()),
-                                nextstate))
+                                fst.Arc(symb, olabel, 1, nextstate))
     dfs(automaton.start())
     return None
 
@@ -154,14 +153,14 @@ def apply_fst_to_list(elements, automaton, is_project=True, **kwargs):
     https://stackoverflow.com/questions/9390536/how-do-you-even-give-an-openfst-made-fst-input-where-does-the-output-go.
 
     Args: elements (list): ordered list of edge symbols for a linear automata.
-        automata_op (Fst): automata that will be applied. is_project (bool,
-        optional): whether to keep only the output labels. kwargs: Additional
-        arguments to the compiler of the linear automata .
+        automata_op (Fst): automata that will be applied.
+        is_project (bool, optional): whether to keep only the output labels.
+        kwargs: Additional arguments to the compiler of the linear automata .
     """
     linear_automata = linear_fst(elements, automaton, **kwargs)
     out = fst.compose(linear_automata, automaton)
     if is_project:
-        out.project(project_output=True)
+        out.project('output')
     return out
 
 
@@ -193,7 +192,7 @@ def all_strings_from_chain(automaton):
     symb_tab = automaton.input_symbols().copy()
     strings = []
     for path in paths:
-        strings.append(''.join([symb_tab.find(k).decode('utf-8') for (_, k) in path if k]))
+        strings.append(''.join([symb_tab.find(k) for (_, k) in path if k]))
     return strings
 
 
@@ -208,7 +207,7 @@ def apply(string, automaton):
     Returns:
         list: strings that result from the application of the FST to the string
     """
-    symbols = [x.decode('utf-8') for (_, x) in automaton.input_symbols()]
+    symbols = [x for (_, x) in automaton.input_symbols()]
     elements = string_to_symbol_list(string, symbols)
     lattice = apply_fst_to_list(elements, automaton)
     if lattice.num_states() > 0:
@@ -236,11 +235,11 @@ def main():
     # Compile the description, returning an Fst object
     scramble = compiler.compile()
     print('original fst')
-    print(scramble.__str__().decode('utf-8'))
+    print(scramble.__str__())
     # Add transitions implied by <other>
     expand_other_symbols(scramble)
     print('expanded fst')
-    print(scramble.__str__().decode('utf-8'))
+    print(scramble.__str__())
     # Apply the transducer to various inputs
     print('a -> ', apply('a', scramble))
     print('bb -> ', apply('bb', scramble))
