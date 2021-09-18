@@ -81,23 +81,30 @@ def string_to_symbol_list(string, symbols):
 # Constructing FSTs
 
 def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
-    """Produce a linear automata.
+    """Produce a linear automaton.
 
     Based on code from
     https://stackoverflow.com/questions/9390536/how-do-you-even-give-an-openfst-made-fst-input-where-does-the-output-go.
 
-    Args: elements (list): ordered list of input symbols automata_op (Fst):
-        automaton to apply keep_isymbols (bool): whether to keep the input
-        symbols
+    Args: elements (list): ordered list of input symbols
+        automata_op (Fst): automaton to apply
+        keep_isymbols (bool): whether to keep the input symbols
     """
+    # compiler = fst.Compiler(isymbols=automata_op.input_symbols().copy(),
+    #                         acceptor=keep_isymbols,
+    #                         keep_isymbols=keep_isymbols,
+    #                         **kwargs)
+
     compiler = fst.Compiler(isymbols=automata_op.input_symbols().copy(),
-                            acceptor=keep_isymbols,
+                            acceptor=True,
                             keep_isymbols=keep_isymbols,
                             **kwargs)
 
     for i, el in enumerate(elements):
-        print("{} {} {}".format(i, i+1, el), file=compiler)
+        print('{} {} {}'.format(i, i+1, el), file=compiler)
     print(str(i+1), file=compiler)
+
+    # print('0 1 a\n1', file=compiler)
 
     return compiler.compile()
 
