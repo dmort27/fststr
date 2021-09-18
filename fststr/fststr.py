@@ -15,7 +15,7 @@ Generally, a workflow with FstStr is as follows:
   (b) Compose the FST from 2 with this automaton
   (c) Extract the unique paths through the resulting lattice
   (d) Convert these to strings
-With FstStr, Step 3 is wrapped up in a single convenience function, apply:
+With FstStr, Step 3 is wrapped up in a single convenience function, `apply`:
 
 >>> fststr.apply('abc', capitalize)
 ['ABC']
@@ -32,7 +32,9 @@ class IllegalSymbol(Exception):
 class FstError(Exception):
     pass
 
+#############################################################################
 # Managing symbol tables and symbol lists
+#############################################################################
 
 """A list of symbols for English"""
 EN_SYMB = list("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-''") + \
@@ -77,8 +79,9 @@ def string_to_symbol_list(string, symbols):
             raise IllegalSymbol('Substring "{}" starts with an unknown symbol'.format(string))
     return elements
 
-
+#############################################################################
 # Constructing FSTs
+#############################################################################
 
 def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
     """Produce a linear automaton.
@@ -90,11 +93,7 @@ def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
         automata_op (Fst): automaton to apply
         keep_isymbols (bool): whether to keep the input symbols
     """
-    # compiler = fst.Compiler(isymbols=automata_op.input_symbols().copy(),
-    #                         acceptor=keep_isymbols,
-    #                         keep_isymbols=keep_isymbols,
-    #                         **kwargs)
-
+    
     compiler = fst.Compiler(isymbols=automata_op.input_symbols().copy(),
                             acceptor=True,
                             keep_isymbols=keep_isymbols,
@@ -104,11 +103,11 @@ def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
         print('{} {} {}'.format(i, i+1, el), file=compiler)
     print(str(i+1), file=compiler)
 
-    # print('0 1 a\n1', file=compiler)
-
     return compiler.compile()
 
+#############################################################################
 # Mutating FSTs
+#############################################################################
 
 def expand_other_symbols(automaton):
     """Adds arcs between states with an arc labeled <other>.
@@ -147,11 +146,13 @@ def expand_other_symbols(automaton):
                         olabel = symb if olabel == other else olabel
                         automaton.add_arc(
                                 state,
-                                fst.Arc(symb, olabel, 1, nextstate))
+                                fst.Arc(symb, olabel, 0.0, nextstate))
     dfs(automaton.start())
     return None
 
+#############################################################################
 # Operating on FSTs
+#############################################################################
 
 def apply_fst_to_list(elements, automaton, is_project=True, **kwargs):
     """Compose a linear automata generated from `elements` with `automata_op`.
@@ -170,8 +171,9 @@ def apply_fst_to_list(elements, automaton, is_project=True, **kwargs):
         out.project('output')
     return out
 
-
+#############################################################################
 # Extracting strings from FSTs
+#############################################################################
 
 def all_strings_from_chain(automaton):
     """Return all strings implied by a non-cyclic automaton
@@ -202,8 +204,9 @@ def all_strings_from_chain(automaton):
         strings.append(''.join([symb_tab.find(k) for (_, k) in path if k]))
     return strings
 
-
+#############################################################################
 # High-level convenience functions
+#############################################################################
 
 def apply(string, automaton):
     """Apply an FST to a string and get back the transduced strings
@@ -248,12 +251,12 @@ def main():
     print('expanded fst')
     print(scramble.__str__())
     # Apply the transducer to various inputs
-    print('a -> ', apply('a', scramble))
-    print('bb -> ', apply('bb', scramble))
-    print('bbcdefg -> ', apply('bb', scramble))
-    print('cb -> ', apply('cb', scramble))
-    print('ab -> ', apply('ab', scramble))
-    print('aa -> ', apply('aa', scramble))
+    print('a -> ', apply('a', scramble)) # => ['A']
+    print('bb -> ', apply('bb', scramble)) # => ['bB']
+    print('bbcdefg -> ', apply('bb', scramble)) # => ['bB]
+    print('cb -> ', apply('cb', scramble)) # => ['cB']
+    print('ab -> ', apply('ab', scramble)) # => []
+    print('aa -> ', apply('aa', scramble)) # => []
     
 if __name__ == '__main__':
     main()
