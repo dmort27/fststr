@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='fststr',
-    version='0.2',
+    version='0.3',
     packages=['fststr',],
     license='MIT license',
     long_description=open('README.md').read(),
