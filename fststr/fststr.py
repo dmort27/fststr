@@ -93,12 +93,14 @@ def linear_fst(elements, automata_op, keep_isymbols=True, **kwargs):
         automata_op (Fst): automaton to apply
         keep_isymbols (bool): whether to keep the input symbols
     """
-    
-    compiler = fst.Compiler(isymbols=automata_op.input_symbols().copy(),
-                            acceptor=True,
-                            keep_isymbols=keep_isymbols,
-                            **kwargs)
 
+    st = isymbols=automata_op.input_symbols().copy()
+
+    compiler = fst.Compiler(isymbols=st,
+                            keep_isymbols=keep_isymbols,
+                            acceptor=keep_isymbols,
+                            **kwargs)
+    
     for i, el in enumerate(elements):
         print('{} {} {}'.format(i, i+1, el), file=compiler)
     print(str(i+1), file=compiler)
