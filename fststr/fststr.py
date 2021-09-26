@@ -197,7 +197,7 @@ def all_strings_from_chain(automaton):
             paths += [path]
         return paths
     if automaton.properties(fst.CYCLIC, True) == fst.CYCLIC:
-        raise FstError('FST is cyclic.')
+        raise FstError('FSA resulting from composition of FST and linear chain automaton has cycles. Cannot extract set of strings.')
     start = automaton.start()
     paths = dfs(automaton, [(start, 0)])
     symb_tab = automaton.input_symbols().copy()
